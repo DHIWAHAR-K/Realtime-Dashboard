@@ -1,0 +1,253 @@
+/* Root layout and page scaffolding. */
+#root {
+  min-height: 100vh;
+}
+
+.dashboard {
+  min-height: 100vh;
+  padding: 32px 48px;
+}
+
+.dashboard-header,
+.metric-grid,
+.chart-panel,
+.error-message {
+  width: 100%;
+  max-width: 1540px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.eyebrow {
+  margin: 0 0 10px;
+  color: #227c69;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.dashboard-header h1 {
+  margin: 0;
+  color: #111827;
+  font-size: 42px;
+  line-height: 1;
+}
+
+.header-copy {
+  margin: 12px 0 0;
+  color: #61707a;
+  font-size: 17px;
+}
+
+.facility-picker {
+  display: grid;
+  gap: 8px;
+  min-width: 230px;
+  color: #34444f;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.facility-picker select {
+  height: 46px;
+  padding: 0 12px;
+  border: 1px solid #b8c5cc;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #172026;
+}
+
+.error-message {
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border: 1px solid #e3a79e;
+  border-radius: 8px;
+  background: #fff4f1;
+  color: #8f2f22;
+  font-weight: 700;
+}
+
+/* Summary metric card grid. */
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.metric-card,
+.chart-panel {
+  border: 1px solid #d8e1e6;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 14px 35px rgba(36, 54, 66, 0.08);
+}
+
+.metric-card {
+  padding: 22px;
+}
+
+.metric-name {
+  margin: 0;
+  color: #61707a;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.metric-value {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 14px 0 10px;
+  color: #111827;
+  font-size: 36px;
+  line-height: 1;
+}
+
+.metric-value span {
+  color: #61707a;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.metric-average {
+  margin: 0;
+  color: #61707a;
+  font-size: 14px;
+}
+
+/* Chart panel and supporting controls. */
+.chart-panel {
+  padding: 24px;
+}
+
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: start;
+  margin-bottom: 18px;
+}
+
+.section-heading h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 24px;
+}
+
+.section-heading p {
+  margin: 8px 0 0;
+  color: #61707a;
+}
+
+.chart-actions {
+  display: flex;
+  align-items: end;
+  gap: 18px;
+}
+
+.chart-metric-picker {
+  display: grid;
+  gap: 8px;
+  min-width: 210px;
+  color: #34444f;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.chart-metric-picker select {
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid #b8c5cc;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #172026;
+}
+
+.refresh-time {
+  min-width: 130px;
+  text-align: right;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.chart-wrapper {
+  width: 100%;
+  height: 380px;
+  padding: 12px 8px 4px;
+  border: 1px solid #e3eaee;
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+
+.recharts-text {
+  fill: #61707a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.recharts-default-tooltip {
+  border: 1px solid #d8e1e6 !important;
+  border-radius: 8px;
+  box-shadow: 0 14px 35px rgba(36, 54, 66, 0.12);
+}
+
+.empty-message {
+  padding: 60px 20px;
+  border: 1px dashed #b8c5cc;
+  border-radius: 8px;
+  color: #61707a;
+  text-align: center;
+}
+
+/* Tablet and mobile adjustments keep the dashboard readable when space gets tight. */
+@media (max-width: 900px) {
+  .dashboard {
+    padding: 24px;
+  }
+
+  .dashboard-header,
+  .section-heading {
+    display: block;
+  }
+
+  .dashboard-header h1 {
+    font-size: 34px;
+  }
+
+  .chart-actions {
+    display: block;
+  }
+
+  .facility-picker,
+  .chart-metric-picker,
+  .refresh-time {
+    margin-top: 18px;
+    text-align: left;
+  }
+}
+
+/* Small-screen tweaks collapse the layout into a single readable column. */
+@media (max-width: 640px) {
+  .dashboard {
+    padding: 18px;
+  }
+
+  .metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-wrapper {
+    height: 300px;
+  }
+}
