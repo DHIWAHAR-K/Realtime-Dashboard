@@ -1,0 +1,3 @@
+# Backend runtime and local API server dependencies.
+fastapi
+uvicorn
