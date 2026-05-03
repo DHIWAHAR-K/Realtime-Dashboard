@@ -57,10 +57,10 @@ function formatLocalTimestamp(date) {
 }
 
 // Builds the fixed chart window timestamps for the API query.
-function getTimeRangeBounds(hours) {
+function getTimeRangeBounds() {
   const end = new Date();
   const start = new Date(end);
-  start.setHours(start.getHours() - hours);
+  start.setHours(start.getHours() - CHART_TIME_RANGE_HOURS);
 
   return {
     startTime: formatLocalTimestamp(start),
@@ -174,7 +174,6 @@ function App() {
   const metricMetadata = Object.fromEntries(
     metrics.map((metric) => [metric.metric_name, metric])
   );
-  const [timeRangeHours, setTimeRangeHours] = useState(2);
   const [metricRanges, setMetricRanges] = useState([]);
 
   // Load the facility list and available metrics once when the page first opens.
@@ -229,7 +228,7 @@ function App() {
     }
 
     let readingUrl = `${API_URL}/sensor-readings?facility_id=${selectedFacilityId}&metric_name=${selectedMetricName}`;
-    const { startTime, endTime } = getTimeRangeBounds(timeRangeHours);
+    const { startTime, endTime } = getTimeRangeBounds();
     readingUrl += `&start_time=${encodeURIComponent(startTime)}&end_time=${encodeURIComponent(endTime)}`;
 
     // Promise.all runs both API requests at the same time.
@@ -251,7 +250,7 @@ function App() {
         setError("Could not load dashboard data. Is the backend running?");
         setIsLoading(false);
       });
-  }, [selectedFacilityId, selectedMetricName, timeRangeHours]);
+  }, [selectedFacilityId, selectedMetricName]);
 
   // Fetch immediately, then refresh the dashboard every 5 seconds.
   useEffect(() => {
@@ -328,7 +327,6 @@ function App() {
           </div>
 
           <div className="chart-actions">
-            
             <label className="chart-metric-picker">
               Chart metric
               <select
@@ -344,20 +342,6 @@ function App() {
                     {formatMetricName(metric.metric_name)}
                   </option>
                 ))}
-              </select>
-            </label>
-
-            <label className="chart-metric-picker">
-              Time Range
-              <select
-                value={timeRangeHours}
-                onChange={(event) => {
-                  setTimeRangeHours(Number(event.target.value));
-                }}
-              >
-                <option value={0.5}>Last 30 min</option>
-                <option value={1}>Last 1 hour</option>
-                <option value={2}>Last 2 hour</option>
               </select>
             </label>
 
