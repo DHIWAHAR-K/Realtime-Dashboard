@@ -1,0 +1,16 @@
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+backend/venv/
+backend/dashboard.db
+
+# Node
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# Environment files
+.env
+*.local
