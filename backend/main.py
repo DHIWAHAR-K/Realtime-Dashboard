@@ -162,3 +162,24 @@ def get_dashboard_summary(facility_id: int):
     conn.close()
 
     return [dict(row) for row in rows]
+
+
+# Returns the historical min/max range for one metric within the selected facility.
+@app.get("/metric-value")
+def get_metric_value(
+    facility_id: int,
+    metric_name: str
+):
+    conn = get_db()
+    
+    row = conn.execute(
+        """
+        SELECT MIN(value), MAX(value) FROM sensor_readings
+        WHERE metric_name = ? AND facility_id = ?
+        """,
+        (metric_name, facility_id)
+    ).fetchone()
+    
+    conn.close()
+    
+    return {"min": row[0], "max": row[1]}
