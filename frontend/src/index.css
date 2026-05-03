@@ -1,0 +1,18 @@
+/* Baseline reset so spacing and box sizing start from a predictable place. */
+* {
+  box-sizing: border-box;
+}
+
+/* Page-wide defaults shared by the full dashboard UI. */
+body {
+  margin: 0;
+  background: #eef2f5;
+  color: #172026;
+  font-family: Arial, sans-serif;
+}
+
+/* Form controls should inherit the same typography as the surrounding layout. */
+button,
+select {
+  font: inherit;
+}
