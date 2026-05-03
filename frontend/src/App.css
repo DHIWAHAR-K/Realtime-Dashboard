@@ -126,6 +126,35 @@
   font-size: 14px;
 }
 
+.metric-range {
+  margin: 10px 0 0;
+  color: #61707a;
+  font-size: 13px;
+}
+
+.metric-card-warning {
+  border-color: #f2b275;
+  background: linear-gradient(180deg, #fff8ef 0%, #ffffff 45%);
+  box-shadow: 0 14px 35px rgba(179, 94, 18, 0.14);
+}
+
+.metric-card-warning .metric-name,
+.metric-card-warning .metric-value,
+.metric-card-warning .metric-value span,
+.metric-card-warning .metric-average,
+.metric-card-warning .metric-range {
+  color: #8f4a06;
+}
+
+.metric-alert {
+  margin: 10px 0 0;
+  color: #a04d00;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 /* Chart panel and supporting controls. */
 .chart-panel {
   padding: 24px;

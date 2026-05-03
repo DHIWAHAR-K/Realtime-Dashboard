@@ -7,6 +7,7 @@ const API_URL = "http://127.0.0.1:8000";
 
 const CHART_TIME_RANGE_HOURS = 2;
 const CHART_TIME_RANGE_LABEL = "last two hours";
+const METRIC_WARNING_THRESHOLD = 0.9;
 
 // Converts a backend metric key into a readable display label.
 function formatMetricName(metricName) {
@@ -40,6 +41,14 @@ function getChartHeading(metricName, metricMetadata) {
   return getMetricAggregationMode(metricName, metricMetadata) === "average"
     ? `Facility average ${formatMetricName(metricName).toLowerCase()} over ${CHART_TIME_RANGE_LABEL}.`
     : `Facility total ${formatMetricName(metricName).toLowerCase()} over ${CHART_TIME_RANGE_LABEL}.`;
+}
+
+function isMetricValueHigh(currentValue, metricRange) {
+  if (!metricRange || metricRange.max == null || metricRange.max <= 0) {
+    return false;
+  }
+
+  return currentValue >= metricRange.max * METRIC_WARNING_THRESHOLD;
 }
 
 // Converts timestamps from the API into short local times for the chart.
@@ -174,7 +183,7 @@ function App() {
   const metricMetadata = Object.fromEntries(
     metrics.map((metric) => [metric.metric_name, metric])
   );
-  const [metricRanges, setMetricRanges] = useState([]);
+  const [metricRanges, setMetricRanges] = useState({});
 
   // Load the facility list and available metrics once when the page first opens.
   useEffect(() => {
@@ -202,23 +211,27 @@ function App() {
       .catch(() => setError("Could not load dashboard options. Is the backend running?"));
   }, []);
 
-  // Load the minimum values for the metrics from the database
+  // Load facility-level metric ranges so the cards can show context and warning states.
   useEffect(() => {
-    if (metrics.length === 0) return;
+    if (metrics.length === 0) {
+      return;
+    }
 
     Promise.all(
-       metrics.map(metric =>
-        fetch(`${API_URL}/metric-value?facility_id=${selectedFacilityId}&metric_name=${metric.metric_name}`).then(
-        (response) => response.json())
-       )
+      metrics.map((metric) =>
+        fetch(
+          `${API_URL}/metric-value?facility_id=${selectedFacilityId}&metric_name=${metric.metric_name}`
+        )
+          .then((response) => response.json())
+          .then((metricRange) => [metric.metric_name, metricRange])
+      )
     )
-        .then((results) => {
-          setMetricRanges(results);
-     })
+      .then((results) => {
+        setMetricRanges(Object.fromEntries(results));
+      })
       .catch(() => {
         setError("Could not load dashboard data. Is the backend running?");
       });
-
   }, [selectedFacilityId, metrics]);
 
   // Fetch both the summary cards and chart readings for the selected filters.
@@ -295,24 +308,30 @@ function App() {
 
       {/* Summary cards for the latest facility metrics. */}
       <section className="metric-grid">
-        {summary.map((metric, index) => {
-          const metricRange = metricRanges[index];
+        {summary.map((metric) => {
+          const currentValue = getMetricSummaryValue(metric, metricMetadata);
+          const metricRange = metricRanges[metric.metric_name];
+          const isWarning = isMetricValueHigh(currentValue, metricRange);
 
           return (
-            <article className="metric-card" key={metric.metric_name}>
+            <article
+              className={`metric-card${isWarning ? " metric-card-warning" : ""}`}
+              key={metric.metric_name}
+            >
               <p className="metric-name">{formatMetricName(metric.metric_name)}</p>
               <h2 className="metric-value">
-                {getMetricSummaryValue(metric, metricMetadata).toFixed(1)}
+                {currentValue.toFixed(1)}
                 <span>{metric.unit}</span>
               </h2>
               <p className="metric-average">
                 {getMetricSummaryLabel(metric.metric_name, metricMetadata)}
               </p>
               {metricRange && (
-                <p>
+                <p className="metric-range">
                   Min: {metricRange.min.toFixed(1)} | Max: {metricRange.max.toFixed(1)}
                 </p>
               )}
+              {isWarning && <p className="metric-alert">Warning: high reading</p>}
             </article>
           );
         })}

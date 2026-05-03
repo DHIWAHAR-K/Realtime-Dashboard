@@ -171,15 +171,31 @@ def get_metric_value(
     metric_name: str
 ):
     conn = get_db()
-    
+
+    aggregation_mode = METRIC_AGGREGATION_MODES.get(metric_name, "sum")
+
     row = conn.execute(
         """
-        SELECT MIN(value), MAX(value) FROM sensor_readings
-        WHERE metric_name = ? AND facility_id = ?
+        WITH facility_metric_points AS (
+            SELECT timestamp,
+                   SUM(value) AS total_value,
+                   AVG(value) AS average_value
+            FROM sensor_readings
+            WHERE metric_name = ? AND facility_id = ?
+            GROUP BY timestamp
+        )
+        SELECT MIN(total_value) AS min_total,
+               MAX(total_value) AS max_total,
+               MIN(average_value) AS min_average,
+               MAX(average_value) AS max_average
+        FROM facility_metric_points
         """,
-        (metric_name, facility_id)
+        (metric_name, facility_id),
     ).fetchone()
-    
+
     conn.close()
-    
-    return {"min": row[0], "max": row[1]}
+
+    if aggregation_mode == "average":
+        return {"min": row["min_average"], "max": row["max_average"]}
+
+    return {"min": row["min_total"], "max": row["max_total"]}
