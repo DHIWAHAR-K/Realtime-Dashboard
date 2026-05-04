@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from database import create_tables, get_db
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -41,22 +41,30 @@ def get_facilities():
     return [dict(row) for row in rows]
 
 
-# Lists assets fleet-wide, or filters by optional facility_id query parameter.
-@app.get("/assets")
-def get_assets(facility_id: int | None = None):
+# Returns one facility together with its assets for detail views and dependent filters.
+@app.get("/facilities/{facility_id}")
+def get_facility_details(facility_id: int):
     conn = get_db()
 
-    if facility_id:
-        rows = conn.execute(
-            "SELECT * FROM assets WHERE facility_id = ?",
-            (facility_id,),
-        ).fetchall()
-    else:
-        rows = conn.execute("SELECT * FROM assets").fetchall()
+    facility_row = conn.execute(
+        "SELECT * FROM facilities WHERE id = ?",
+        (facility_id,),
+    ).fetchone()
+
+    if facility_row is None:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Facility not found")
+
+    asset_rows = conn.execute(
+        "SELECT * FROM assets WHERE facility_id = ? ORDER BY name",
+        (facility_id,),
+    ).fetchall()
 
     conn.close()
 
-    return [dict(row) for row in rows]
+    facility = dict(facility_row)
+    facility["assets"] = [dict(row) for row in asset_rows]
+    return facility
 
 
 # Lists the available sensor metrics for frontend selectors and aggregation behavior.

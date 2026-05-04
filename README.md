@@ -107,18 +107,11 @@ Returns a simple message confirming the API is running.
 
 ```text
 GET /facilities
+GET /facilities/1
 ```
 
 - `GET /facilities` returns all facilities.
-
-### Assets
-
-```text
-GET /assets
-GET /assets?facility_id=1
-```
-
-Returns all assets, or only the assets belonging to one facility.
+- `GET /facilities/{facility_id}` returns one facility with its nested asset list.
 
 ### Metrics
 
