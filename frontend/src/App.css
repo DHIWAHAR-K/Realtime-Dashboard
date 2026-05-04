@@ -219,6 +219,13 @@
   font-size: 13px;
 }
 
+.metric-updated {
+  margin: 8px 0 0;
+  color: #61707a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .metric-card-normal {
   border-color: #8fcca6;
   background: linear-gradient(180deg, #effbf2 0%, #ffffff 45%);
@@ -235,7 +242,8 @@
 .metric-card-normal .metric-value,
 .metric-card-normal .metric-value span,
 .metric-card-normal .metric-average,
-.metric-card-normal .metric-range {
+.metric-card-normal .metric-range,
+.metric-card-normal .metric-updated {
   color: #1e6a3c;
 }
 
@@ -243,7 +251,8 @@
 .metric-card-high .metric-value,
 .metric-card-high .metric-value span,
 .metric-card-high .metric-average,
-.metric-card-high .metric-range {
+.metric-card-high .metric-range,
+.metric-card-high .metric-updated {
   color: #9f1d1d;
 }
 

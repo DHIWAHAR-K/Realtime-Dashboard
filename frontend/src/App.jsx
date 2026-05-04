@@ -217,6 +217,7 @@ function App() {
     const metricRange = metricRanges[metric.metric_name];
     const metricStatus = getMetricStatus(currentValue, metricRange);
     const alertThreshold = getMetricAlertThreshold(metricRange);
+    const lastUpdatedLabel = metric.last_updated ? `Updated ${formatTime(metric.last_updated)}` : "";
 
     return {
       ...metric,
@@ -224,6 +225,7 @@ function App() {
       metricRange,
       metricStatus,
       alertThreshold,
+      lastUpdatedLabel,
     };
   });
   const activeAlerts = summaryMetrics.filter((metric) => metric.metricStatus === "high");
@@ -429,6 +431,9 @@ function App() {
                 <p className="metric-range">
                   Min: {metric.metricRange.min.toFixed(1)} | Max: {metric.metricRange.max.toFixed(1)}
                 </p>
+              )}
+              {metric.lastUpdatedLabel && (
+                <p className="metric-updated">{metric.lastUpdatedLabel}</p>
               )}
               {metric.metricStatus === "normal" && (
                 <p className="metric-status metric-status-normal">Normal reading</p>
