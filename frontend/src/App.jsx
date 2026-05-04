@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import {CartesianGrid, Line, LineChart, Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis} from "recharts";
+import {CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis} from "recharts";
 import "./App.css";
 
 
@@ -9,6 +9,7 @@ const API_URL = "http://127.0.0.1:8000";
 const CHART_TIME_RANGE_HOURS = 2;
 const CHART_TIME_RANGE_LABEL = "last two hours";
 const METRIC_HIGH_THRESHOLD = 0.9;
+const METRIC_HIGH_THRESHOLD_PERCENT = Math.round(METRIC_HIGH_THRESHOLD * 100);
 
 
 // Converts a backend metric key into a readable display label.
@@ -48,11 +49,21 @@ function getChartHeading(metricName, metricMetadata) {
 }
 
 function getMetricStatus(currentValue, metricRange) {
-  if (!metricRange || metricRange.max == null || metricRange.max <= 0) {
+  const highThreshold = getMetricAlertThreshold(metricRange);
+
+  if (highThreshold == null) {
     return "neutral";
   }
 
-  return currentValue >= metricRange.max * METRIC_HIGH_THRESHOLD ? "high" : "normal";
+  return currentValue >= highThreshold ? "high" : "normal";
+}
+
+function getMetricAlertThreshold(metricRange) {
+  if (!metricRange || metricRange.max == null || metricRange.max <= 0) {
+    return null;
+  }
+
+  return metricRange.max * METRIC_HIGH_THRESHOLD;
 }
 
 
@@ -83,18 +94,8 @@ function getTimeRangeBounds() {
   };
 }
 
-
-// Renders the line chart for the currently selected metric.
-function MetricChart({ readings, metricName, metricMetadata }) {
-  // Show a friendly message if the API returned no readings.
-  if (readings.length === 0) {
-    return <p className="empty-message">No chart data available.</p>;
-  }
-
-  const aggregationMode = getMetricAggregationMode(metricName, metricMetadata);
-
-  // Combine asset-level readings into one facility-level point at each timestamp.
-  const chartData = Array.from(
+function buildChartData(readings, aggregationMode) {
+  return Array.from(
     readings
       .reduce((readingsByTimestamp, reading) => {
         const existingReading = readingsByTimestamp.get(reading.timestamp);
@@ -120,11 +121,27 @@ function MetricChart({ readings, metricName, metricMetadata }) {
     ...reading,
     value: aggregationMode === "average" ? reading.total / reading.count : reading.total,
   }));
+}
 
-  const tooltipLabel =
-    aggregationMode === "average"
-      ? `${formatMetricName(metricName)} (facility average)`
-      : `${formatMetricName(metricName)} (facility total)`;
+function getChartTooltipLabel(metricName, aggregationMode) {
+  return aggregationMode === "average"
+    ? `${formatMetricName(metricName)} (facility average)`
+    : `${formatMetricName(metricName)} (facility total)`;
+}
+
+
+// Renders the line chart for the currently selected metric.
+function MetricChart({ readings, metricName, metricMetadata }) {
+  // Show a friendly message if the API returned no readings.
+  if (readings.length === 0) {
+    return <p className="empty-message">No chart data available.</p>;
+  }
+
+  const aggregationMode = getMetricAggregationMode(metricName, metricMetadata);
+
+  // Combine asset-level readings into one facility-level point at each timestamp.
+  const chartData = buildChartData(readings, aggregationMode);
+  const tooltipLabel = getChartTooltipLabel(metricName, aggregationMode);
 
 
   // The API returns the unit with each reading, so the y-axis can label itself.
@@ -193,6 +210,24 @@ function App() {
     metrics.map((metric) => [metric.metric_name, metric])
   );
   const [metricRanges, setMetricRanges] = useState({});
+
+  // Derive card and alert state once so every metric from the backend stays in sync.
+  const summaryMetrics = summary.map((metric) => {
+    const currentValue = getMetricSummaryValue(metric, metricMetadata);
+    const metricRange = metricRanges[metric.metric_name];
+    const metricStatus = getMetricStatus(currentValue, metricRange);
+    const alertThreshold = getMetricAlertThreshold(metricRange);
+
+    return {
+      ...metric,
+      currentValue,
+      metricRange,
+      metricStatus,
+      alertThreshold,
+    };
+  });
+  const activeAlerts = summaryMetrics.filter((metric) => metric.metricStatus === "high");
+  const hasAlertCoverage = summaryMetrics.some((metric) => metric.alertThreshold != null);
 
 
   // Load the facility list and available metrics once when the page first opens.
@@ -322,15 +357,60 @@ function App() {
       {/* Show backend/API errors when a fetch fails. */}
       {error && <p className="error-message">{error}</p>}
 
+      {!isLoading && summaryMetrics.length > 0 && hasAlertCoverage && (
+        <section
+          className={`alert-panel ${
+            activeAlerts.length > 0 ? "alert-panel-high" : "alert-panel-normal"
+          }`}
+          aria-live="polite"
+        >
+          <div className="alert-panel-heading">
+            <div>
+              <p className="alert-eyebrow">
+                {activeAlerts.length > 0 ? "Active alerts" : "System status"}
+              </p>
+              <h2>
+                {activeAlerts.length > 0
+                  ? `${activeAlerts.length} metric${
+                      activeAlerts.length === 1 ? "" : "s"
+                    } need attention`
+                  : "All tracked metrics are within range"}
+              </h2>
+              <p>
+                {activeAlerts.length > 0
+                  ? `These readings are at or above ${METRIC_HIGH_THRESHOLD_PERCENT}% of their recent facility max.`
+                  : "No facility metrics are currently near their recent high-water mark."}
+              </p>
+            </div>
+          </div>
+
+          {activeAlerts.length > 0 && (
+            <div className="alert-list">
+              {activeAlerts.map((metric) => (
+                <article className="alert-item" key={metric.metric_name}>
+                  <div>
+                    <p className="alert-metric-name">{formatMetricName(metric.metric_name)}</p>
+                    <p className="alert-metric-copy">
+                      Current: {metric.currentValue.toFixed(1)} {metric.unit} | Alert threshold:{" "}
+                      {metric.alertThreshold.toFixed(1)} {metric.unit}
+                    </p>
+                  </div>
+                  <p className="alert-badge">High</p>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
 
       {/* Summary cards for the latest facility metrics. */}
       <section className="metric-grid">
-        {summary.map((metric) => {
-          const currentValue = getMetricSummaryValue(metric, metricMetadata);
-          const metricRange = metricRanges[metric.metric_name];
-          const metricStatus = getMetricStatus(currentValue, metricRange);
+        {summaryMetrics.map((metric) => {
           const metricCardClass =
-            metricStatus === "neutral" ? "metric-card" : `metric-card metric-card-${metricStatus}`;
+            metric.metricStatus === "neutral"
+              ? "metric-card"
+              : `metric-card metric-card-${metric.metricStatus}`;
 
           return (
             <article
@@ -339,22 +419,22 @@ function App() {
             >
               <p className="metric-name">{formatMetricName(metric.metric_name)}</p>
               <h2 className="metric-value">
-                {currentValue.toFixed(1)}
+                {metric.currentValue.toFixed(1)}
                 <span>{metric.unit}</span>
               </h2>
               <p className="metric-average">
                 {getMetricSummaryLabel(metric.metric_name, metricMetadata)}
               </p>
-              {metricRange && (
+              {metric.metricRange && (
                 <p className="metric-range">
-                  Min: {metricRange.min.toFixed(1)} | Max: {metricRange.max.toFixed(1)}
+                  Min: {metric.metricRange.min.toFixed(1)} | Max: {metric.metricRange.max.toFixed(1)}
                 </p>
               )}
-              {metricStatus === "normal" && (
+              {metric.metricStatus === "normal" && (
                 <p className="metric-status metric-status-normal">Normal reading</p>
               )}
-              {metricStatus === "high" && (
-                <p className="metric-status metric-status-high">High reading</p>
+              {metric.metricStatus === "high" && (
+                <p className="metric-status metric-status-high">High alert</p>
               )}
             </article>
           );
