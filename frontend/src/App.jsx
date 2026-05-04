@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
-import {CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis} from "recharts";
+import {CartesianGrid, Line, LineChart, Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis} from "recharts";
 import "./App.css";
+
 
 // Base URL for the FastAPI backend.
 const API_URL = "http://127.0.0.1:8000";
 
 const CHART_TIME_RANGE_HOURS = 2;
 const CHART_TIME_RANGE_LABEL = "last two hours";
-const METRIC_WARNING_THRESHOLD = 0.9;
+const METRIC_HIGH_THRESHOLD = 0.9;
+
 
 // Converts a backend metric key into a readable display label.
 function formatMetricName(metricName) {
@@ -21,6 +23,8 @@ function formatMetricName(metricName) {
     .join(" ");
 }
 
+
+// Helper functions
 function getMetricAggregationMode(metricName, metricMetadata) {
   return metricMetadata[metricName]?.aggregation_mode || "sum";
 }
@@ -43,13 +47,14 @@ function getChartHeading(metricName, metricMetadata) {
     : `Facility total ${formatMetricName(metricName).toLowerCase()} over ${CHART_TIME_RANGE_LABEL}.`;
 }
 
-function isMetricValueHigh(currentValue, metricRange) {
+function getMetricStatus(currentValue, metricRange) {
   if (!metricRange || metricRange.max == null || metricRange.max <= 0) {
-    return false;
+    return "neutral";
   }
 
-  return currentValue >= metricRange.max * METRIC_WARNING_THRESHOLD;
+  return currentValue >= metricRange.max * METRIC_HIGH_THRESHOLD ? "high" : "normal";
 }
+
 
 // Converts timestamps from the API into short local times for the chart.
 function formatTime(timestamp) {
@@ -65,6 +70,7 @@ function formatLocalTimestamp(date) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
+
 // Builds the fixed chart window timestamps for the API query.
 function getTimeRangeBounds() {
   const end = new Date();
@@ -76,6 +82,7 @@ function getTimeRangeBounds() {
     endTime: formatLocalTimestamp(end),
   };
 }
+
 
 // Renders the line chart for the currently selected metric.
 function MetricChart({ readings, metricName, metricMetadata }) {
@@ -118,6 +125,7 @@ function MetricChart({ readings, metricName, metricMetadata }) {
     aggregationMode === "average"
       ? `${formatMetricName(metricName)} (facility average)`
       : `${formatMetricName(metricName)} (facility total)`;
+
 
   // The API returns the unit with each reading, so the y-axis can label itself.
   const unit = chartData[0].unit;
@@ -168,6 +176,7 @@ function MetricChart({ readings, metricName, metricMetadata }) {
   );
 }
 
+
 // Main dashboard component: fetches API data and renders the full page.
 function App() {
   // React state for API data and current UI selections.
@@ -184,6 +193,7 @@ function App() {
     metrics.map((metric) => [metric.metric_name, metric])
   );
   const [metricRanges, setMetricRanges] = useState({});
+
 
   // Load the facility list and available metrics once when the page first opens.
   useEffect(() => {
@@ -211,6 +221,7 @@ function App() {
       .catch(() => setError("Could not load dashboard options. Is the backend running?"));
   }, []);
 
+
   // Load facility-level metric ranges so the cards can show context and warning states.
   useEffect(() => {
     if (metrics.length === 0) {
@@ -234,6 +245,7 @@ function App() {
       });
   }, [selectedFacilityId, metrics]);
 
+
   // Fetch both the summary cards and chart readings for the selected filters.
   const fetchDashboardData = useCallback(() => {
     if (!selectedMetricName) {
@@ -243,6 +255,7 @@ function App() {
     let readingUrl = `${API_URL}/sensor-readings?facility_id=${selectedFacilityId}&metric_name=${selectedMetricName}`;
     const { startTime, endTime } = getTimeRangeBounds();
     readingUrl += `&start_time=${encodeURIComponent(startTime)}&end_time=${encodeURIComponent(endTime)}`;
+
 
     // Promise.all runs both API requests at the same time.
     Promise.all([
@@ -265,11 +278,13 @@ function App() {
       });
   }, [selectedFacilityId, selectedMetricName]);
 
+
   // Fetch immediately, then refresh the dashboard every 5 seconds.
   useEffect(() => {
     fetchDashboardData();
 
     const intervalId = setInterval(fetchDashboardData, 5000);
+
 
     // Cleanup prevents duplicate timers when selected filters change.
     return () => clearInterval(intervalId);
@@ -303,19 +318,23 @@ function App() {
         </label>
       </header>
 
+
       {/* Show backend/API errors when a fetch fails. */}
       {error && <p className="error-message">{error}</p>}
+
 
       {/* Summary cards for the latest facility metrics. */}
       <section className="metric-grid">
         {summary.map((metric) => {
           const currentValue = getMetricSummaryValue(metric, metricMetadata);
           const metricRange = metricRanges[metric.metric_name];
-          const isWarning = isMetricValueHigh(currentValue, metricRange);
+          const metricStatus = getMetricStatus(currentValue, metricRange);
+          const metricCardClass =
+            metricStatus === "neutral" ? "metric-card" : `metric-card metric-card-${metricStatus}`;
 
           return (
             <article
-              className={`metric-card${isWarning ? " metric-card-warning" : ""}`}
+              className={metricCardClass}
               key={metric.metric_name}
             >
               <p className="metric-name">{formatMetricName(metric.metric_name)}</p>
@@ -331,11 +350,17 @@ function App() {
                   Min: {metricRange.min.toFixed(1)} | Max: {metricRange.max.toFixed(1)}
                 </p>
               )}
-              {isWarning && <p className="metric-alert">Warning: high reading</p>}
+              {metricStatus === "normal" && (
+                <p className="metric-status metric-status-normal">Normal reading</p>
+              )}
+              {metricStatus === "high" && (
+                <p className="metric-status metric-status-high">High reading</p>
+              )}
             </article>
           );
         })}
       </section>
+
 
       {/* Chart section for the selected facility metric over time. */}
       <section className="chart-panel">
@@ -369,6 +394,7 @@ function App() {
             </p>
           </div>
         </div>
+
 
         {/* Pass the fetched readings into the reusable chart component. */}
         {isLoading ? (
